@@ -4,12 +4,17 @@ class CategoryList
   attr_accessor :categories, :topic_users, :uncategorized
 
   def initialize(current_user)
-    @categories = Category
-                    .includes(featured_topics: [:category])
-                    .includes(:featured_users)
-                    .where('topics.visible' => true)
-                    .order('categories.topics_week desc, categories.topics_month desc, categories.topics_year desc')
-                    .to_a
+    guardian = Guardian.new(current_user)
+    if guardian.can_see_categories?
+      @categories = Category
+                      .includes(featured_topics: [:category])
+                      .includes(:featured_users)
+                      .where('topics.visible' => true)
+                      .order('categories.topics_week desc, categories.topics_month desc, categories.topics_year desc')
+                      .to_a
+    else
+      @categories = []
+    end
 
     # Support for uncategorized topics
     uncategorized_topics = Topic
@@ -43,11 +48,11 @@ class CategoryList
         end
       end
 
-      @categories.insert(insert_at || @categories.size, uncategorized)
+      @categories.insert(insert_at || @categories.size, uncategorized) if guardian.can_see_categories?
     end
 
     # Remove categories with no featured topics unless we have the ability to edit one
-    unless Guardian.new(current_user).can_create?(Category)
+    unless guardian.can_create?(Category)
       @categories.delete_if { |c| c.featured_topics.blank? }
     end
 

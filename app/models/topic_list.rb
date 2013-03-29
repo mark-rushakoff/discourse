@@ -13,10 +13,12 @@ class TopicList
     @filter = filter
     @current_user = current_user
     @topics_input = topics
+    @guardian = Guardian.new(@current_user)
   end
 
   # Lazy initialization
   def topics
+    return [] unless @guardian.can_see_topics?
     return @topics if @topics.present?
 
     @topics = @topics_input.to_a
